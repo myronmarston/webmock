@@ -54,4 +54,41 @@ describe "Webmock with Net:HTTP" do
     }.body.should =~ /Example Web Page/
   end
 
+  describe 'after_request callback support' do
+    let(:expected_body_regex) { /You have reached this web page by typing.*example\.com/ }
+
+    before(:each) do
+      WebMock.allow_net_connect!
+      WebMock.after_request do |_, response|
+        @callback_response = response
+      end
+    end
+
+    after(:each) do
+      WebMock.reset_callbacks
+    end
+
+    def perform_get_with_returning_block
+      http_request(:get, "http://www.example.com/") do |response|
+        return response.body
+      end
+    end
+
+    it "should support the after_request callback on an asynchronous request" do
+      response_body = ''
+      http_request(:get, "http://www.example.com/") do |response|
+        response.read_body { |fragment| response_body << fragment }
+      end
+      response_body.should =~ expected_body_regex
+
+      @callback_response.body.should == response_body
+    end
+
+    it "should support the after_request callback on a request with a returning block" do
+      response_body = perform_get_with_returning_block
+      response_body.should =~ expected_body_regex
+      @callback_response.should be_instance_of(WebMock::Response)
+      @callback_response.body.should == response_body
+    end
+  end
 end
