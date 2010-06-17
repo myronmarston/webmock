@@ -59,7 +59,9 @@ describe "Webmock with Net:HTTP" do
 
     before(:each) do
       WebMock.allow_net_connect!
+      @callback_invocation_count = 0
       WebMock.after_request do |_, response|
+        @callback_invocation_count += 1
         @callback_response = response
       end
     end
@@ -89,6 +91,11 @@ describe "Webmock with Net:HTTP" do
       response_body.should =~ expected_body_regex
       @callback_response.should be_instance_of(WebMock::Response)
       @callback_response.body.should == response_body
+    end
+
+    it "should only invoke the after_request callback once, even for a recursive post request" do
+      Net::HTTP.new('example.com', 80).post('/', nil)
+      @callback_invocation_count.should == 1
     end
   end
 end
