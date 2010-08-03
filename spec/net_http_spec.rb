@@ -9,6 +9,12 @@ describe "Webmock with Net:HTTP" do
 
   it_should_behave_like "WebMock"
 
+  it "should handle multiple values for the same response header" do
+    stub_http_request(:get, "www.example.com").to_return(:headers => { 'Set-Cookie' => ['foo=bar', 'bar=bazz'] })
+    response = Net::HTTP.get_response(URI.parse("http://www.example.com/"))
+    response.get_fields('Set-Cookie').should == ['foo=bar', 'bar=bazz']
+  end
+
   it "should work with block provided" do
     stub_http_request(:get, "www.example.com").to_return(:body => "abc"*100000)
     Net::HTTP.start("www.example.com") { |query| query.get("/") }.body.should == "abc"*100000
